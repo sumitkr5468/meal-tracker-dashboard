@@ -30,7 +30,7 @@ const DAILY_TARGETS = {
 };
 
 function fetchMeals(from, to) {
-  const url = `${SUPABASE_URL}/rest/v1/meals?order=created_at.desc`;
+  const url = `${SUPABASE_URL}/rest/v1/meals?created_at=gte.${from}&created_at=lte.${to}&order=created_at.desc`;
   return fetch(url, {
     headers: {
       apikey: SUPABASE_KEY,
@@ -47,7 +47,10 @@ function getDateRange(days) {
   const to = new Date();
   const from = new Date();
   from.setDate(from.getDate() - days);
-  return { from: formatDate(from), to: formatDate(to) };
+  return {
+    from: formatDate(from) + "T00:00:00",
+    to: formatDate(to) + "T23:59:59",
+  };
 }
 
 function CalorieRing({ consumed, target }) {
@@ -154,7 +157,7 @@ export default function App() {
     setLoading(true);
     try {
       const { from, to } = customFrom && customTo
-        ? { from: customFrom, to: customTo + "T23:59:59" }
+        ? { from: customFrom + "T00:00:00", to: customTo + "T23:59:59" }
         : getDateRange(dateRange);
       const data = await fetchMeals(from, to);
       setMeals(Array.isArray(data) ? data : []);
@@ -222,7 +225,7 @@ export default function App() {
             🥗 Meal Tracker
           </h1>
           <p style={{ margin: "4px 0 0", color: COLORS.muted, fontSize: 13 }}>
-            {meals.length} meals • {dateRange}-day view
+            {meals.length} meals • {customFrom && customTo ? `${customFrom} → ${customTo}` : `${dateRange}-day view`}
           </p>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
@@ -258,17 +261,13 @@ export default function App() {
         <div style={{ textAlign: "center", color: COLORS.muted, padding: 60 }}>Loading meals...</div>
       ) : (
         <>
-          {/* OVERVIEW TAB */}
           {activeTab === "overview" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-              {/* Top row */}
               <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-                {/* Calorie Ring */}
                 <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 24, display: "flex", flexDirection: "column", alignItems: "center", minWidth: 220 }}>
                   <div style={{ color: COLORS.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, marginBottom: 16 }}>Today's Calories</div>
                   <CalorieRing consumed={todayCalories} target={DAILY_CALORIE_TARGET} />
                 </div>
-                {/* Macro Pie */}
                 <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 24, flex: 1, minWidth: 220 }}>
                   <div style={{ color: COLORS.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, marginBottom: 16 }}>Macro Split (kcal)</div>
                   {macroData.length > 0 ? (
@@ -291,7 +290,6 @@ export default function App() {
                   ) : <div style={{ color: COLORS.muted, fontSize: 13 }}>No meals logged today</div>}
                 </div>
               </div>
-              {/* Stat cards */}
               <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                 <StatCard label="Protein" value={todayProtein.toFixed(1)} unit="g" color={COLORS.protein} />
                 <StatCard label="Carbs" value={todayCarbs.toFixed(1)} unit="g" color={COLORS.carbs} />
@@ -299,7 +297,6 @@ export default function App() {
                 <StatCard label="Fiber" value={todayFiber.toFixed(1)} unit="g" color={COLORS.fiber} />
                 <StatCard label="Meals today" value={todayMeals.length} unit="" />
               </div>
-              {/* Today's meals */}
               <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, overflow: "hidden" }}>
                 <div style={{ padding: "16px 16px 12px", borderBottom: `1px solid ${COLORS.border}`, color: COLORS.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1 }}>Today's Meals</div>
                 {todayMeals.length > 0
@@ -309,7 +306,6 @@ export default function App() {
             </div>
           )}
 
-          {/* TRENDS TAB */}
           {activeTab === "trends" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
               <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 24 }}>
@@ -337,7 +333,6 @@ export default function App() {
             </div>
           )}
 
-          {/* MEAL LOG TAB */}
           {activeTab === "log" && (
             <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, overflow: "hidden" }}>
               <div style={{ padding: "16px 16px 12px", borderBottom: `1px solid ${COLORS.border}`, color: COLORS.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1 }}>
@@ -349,7 +344,6 @@ export default function App() {
             </div>
           )}
 
-          {/* MICROS TAB */}
           {activeTab === "micros" && (
             <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 24 }}>
               <div style={{ color: COLORS.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, marginBottom: 20 }}>Today's Micronutrients vs Daily Target</div>
